@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Papers 02 — Alignment &amp; Fine-Tuning</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-card: #0d1117;
+            --bg-code: #161b22;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent: #76B900;
+            --accent-dim: #76B90044;
+            --accent-glow: #76B90033;
+            --border: #21262d;
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+            --font-body: 'Inter', sans-serif;
+            --max-width: 900px;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 17px;
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            position: relative;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .hero > * { position: relative; z-index: 1; }
+        .series-label {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--accent);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+        .hero h1 {
+            font-family: var(--font-display);
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+            margin-bottom: 1rem;
+        }
+        .hero h1 .accent { color: var(--accent); }
+        .hero .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 640px;
+            margin-bottom: 2rem;
+        }
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-bottom: 2.5rem;
+        }
+        .tag {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            background: var(--accent-dim);
+            white-space: nowrap;
+        }
+        .pipeline {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            margin-bottom: 1rem;
+            max-width: var(--max-width);
+        }
+        .pipeline-step {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            padding: 0.3rem 0.7rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+        .pipeline-arrow { color: var(--accent); font-size: 0.9rem; font-weight: 700; }
+        .slide {
+            min-height: 100vh;
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 4rem 1.5rem;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .slide-number {
+            font-family: var(--font-display);
+            font-size: 5rem;
+            font-weight: 700;
+            color: var(--accent-dim);
+            position: absolute;
+            top: 2rem;
+            right: 1.5rem;
+            line-height: 1;
+            user-select: none;
+        }
+        .slide h2 {
+            font-family: var(--font-display);
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+            line-height: 1.25;
+        }
+        .slide h3 {
+            font-family: var(--font-display);
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .slide p { margin-bottom: 1rem; color: var(--text-secondary); }
+        .slide p strong { color: var(--text-primary); }
+        .slide ul, .slide ol { margin-bottom: 1rem; padding-left: 1.5rem; color: var(--text-secondary); }
+        .slide li { margin-bottom: 0.4rem; }
+        .slide li strong { color: var(--text-primary); }
+        .slide code {
+            font-family: var(--font-mono);
+            font-size: 0.88em;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            padding: 0.05rem 0.35rem;
+            border-radius: 3px;
+            color: #c9d1d9;
+        }
+        .code-block {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin: 1.25rem 0;
+            overflow: hidden;
+        }
+        .code-header {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            background: rgba(118, 185, 0, 0.08);
+            padding: 0.4rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .code-block pre { margin: 0; padding: 1rem; overflow-x: auto; }
+        .code-block code {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #c9d1d9;
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+        .kw { color: #ff7b72; }
+        .fn { color: #d2a8ff; }
+        .str { color: #a5d6ff; }
+        .cm { color: #8b949e; font-style: italic; }
+        .num { color: #79c0ff; }
+        .type { color: #ffa657; }
+        .dir { color: #ff7b72; }
+        .mac { color: #ffa657; }
+        .table-wrap {
+            overflow-x: auto;
+            margin: 1.25rem 0;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th {
+            background: var(--bg-code);
+            color: var(--accent);
+            font-weight: 600;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-family: var(--font-display);
+            white-space: nowrap;
+        }
+        td {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:nth-child(even) td { background: rgba(13, 17, 23, 0.5); }
+        .diagram-flow {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .diagram-box {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            text-align: center;
+            white-space: nowrap;
+        }
+        .diagram-box.accent { border-color: var(--accent); color: var(--accent); background: rgba(118, 185, 0, 0.08); }
+        .diagram-box.dim { color: var(--text-secondary); border-color: var(--border); }
+        .diagram-arrow { color: var(--accent); font-size: 1.3rem; font-weight: 700; }
+        .diagram-vertical {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .diagram-vertical .diagram-arrow { font-size: 1.1rem; }
+        .hierarchy {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .hierarchy-level { display: flex; align-items: center; gap: 0.75rem; }
+        .hierarchy-label {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            min-width: 80px;
+            text-align: right;
+        }
+        .hierarchy-items { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+        .hierarchy-item {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+        .hierarchy-item.accent { border-color: var(--accent); color: var(--accent); background: rgba(118, 185, 0, 0.08); }
+        .diagram-grid {
+            display: grid;
+            gap: 0.75rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .diagram-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+        .diagram-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .diagram-panel {
+            padding: 1rem;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+        .diagram-panel.accent-border { border-left: 3px solid var(--accent); }
+        .diagram-panel h4 {
+            font-family: var(--font-display);
+            font-size: 1rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+        .diagram-panel p, .diagram-panel ul { font-size: 0.85rem; }
+        .callout {
+            background: var(--bg-card);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 8px 8px 0;
+            padding: 1rem 1.25rem;
+            margin: 1.25rem 0;
+        }
+        .callout p { margin-bottom: 0; }
+        .callout p + p { margin-top: 0.5rem; }
+        .callout .callout-label {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.3rem;
+        }
+        .contents-list { list-style: none; padding-left: 0; counter-reset: contents; }
+        .contents-list li {
+            counter-increment: contents;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .contents-list li:last-child { border-bottom: none; }
+        .contents-list li::before {
+            content: counter(contents, decimal-leading-zero);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--accent);
+            min-width: 2rem;
+        }
+        .contents-list a { color: var(--text-primary); text-decoration: none; transition: color 0.2s; }
+        .contents-list a:hover { color: var(--accent); }
+        .footer {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+            max-width: var(--max-width);
+            margin: 0 auto;
+        }
+        .footer a { color: var(--accent); text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
+        .canvas-wrap {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1.25rem 0;
+            overflow-x: auto;
+        }
+        .canvas-wrap canvas, .canvas-wrap svg { display: block; margin: 0 auto; max-width: 100%; }
+        .badge {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            padding: 0.1rem 0.45rem;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            vertical-align: middle;
+            margin-left: 0.3rem;
+        }
+        .badge.ok    { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+        .badge.warn  { border-color: #ffa657; color: #ffa657; background: rgba(255,166,87,0.08); }
+        .badge.bad   { border-color: #ff7b72; color: #ff7b72; background: rgba(255,123,114,0.08); }
+        @media (max-width: 640px) {
+            .slide { padding: 3rem 1rem; min-height: auto; }
+            .slide-number { font-size: 3rem; top: 1.5rem; right: 1rem; }
+            .slide h2 { font-size: 1.5rem; }
+            .diagram-grid.cols-2, .diagram-grid.cols-3 { grid-template-columns: 1fr; }
+            .pipeline { gap: 0.15rem; }
+            .pipeline-step { font-size: 0.6rem; padding: 0.2rem 0.4rem; }
+            .hero h1 { font-size: 1.8rem; }
+            table { font-size: 0.78rem; }
+        }
+    </style>
+</head>
+<body>
+<header class="hero">
+    <div class="series-label">Key LLM Publications Series &mdash; Presentation 02</div>
+    <h1>Alignment &amp; <span class="accent">Fine-Tuning</span></h1>
+    <p class="subtitle">The five papers that turned a next-token predictor into a helpful, harmless assistant &mdash; and made fine-tuning one cheap enough to run on a single GPU.</p>
+    <div class="tags">
+        <span class="tag">RLHF</span>
+        <span class="tag">InstructGPT</span>
+        <span class="tag">Constitutional AI</span>
+        <span class="tag">LoRA</span>
+        <span class="tag">QLoRA</span>
+        <span class="tag">DPO</span>
+    </div>
+    <div class="pipeline">
+        <span class="pipeline-step">Pretrained Base</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">SFT</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Reward Model</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">RLHF / PPO</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">DPO</span>
+    </div>
+</header>
+
+<section class="slide" id="slide-00">
+    <div class="slide-number">00</div>
+    <h2>The Five Papers</h2>
+    <p>Pretraining gives a model knowledge; <strong>alignment</strong> gives it manners. This deck covers the canonical recipe for steering a base model toward human intent, the move from human to AI feedback, and the parameter-efficient methods that made all of this affordable.</p>
+    <ul class="contents-list">
+        <li><a href="#slide-01">InstructGPT &mdash; The RLHF Recipe</a></li>
+        <li><a href="#slide-02">Constitutional AI &mdash; Harmlessness from AI Feedback</a></li>
+        <li><a href="#slide-03">LoRA &mdash; Low-Rank Adaptation</a></li>
+        <li><a href="#slide-04">QLoRA &mdash; Finetuning Quantized LLMs</a></li>
+        <li><a href="#slide-05">DPO &mdash; Direct Preference Optimization</a></li>
+        <li><a href="#slide-06">What to Take Away</a></li>
+    </ul>
+</section>
+
+<section class="slide" id="slide-01">
+    <div class="slide-number">01</div>
+    <h2>Training Language Models to Follow Instructions with Human Feedback</h2>
+    <p>Ouyang et al. (OpenAI), 2022 <span class="badge ok">NeurIPS 2022</span> <span class="badge">arXiv:2203.02155</span> &mdash; the InstructGPT paper, and the direct technical ancestor of ChatGPT.</p>
+
+    <h3>The problem</h3>
+    <p>A base GPT-3 trained purely on next-token likelihood is <strong>misaligned with user intent</strong>. Asked to "explain the moon landing to a six-year-old" it may continue the prompt, list more instructions, or produce something verbose and unhelpful. The pretraining objective optimises for plausible continuations of internet text &mdash; not for being helpful, truthful, or harmless when a human gives an instruction.</p>
+
+    <h3>The contribution</h3>
+    <p>A reproducible three-stage recipe that became the industry default for <strong>RLHF (Reinforcement Learning from Human Feedback)</strong>:</p>
+    <ol>
+        <li><strong>SFT</strong> &mdash; supervised fine-tuning on a dataset of human-written demonstrations of the desired behaviour.</li>
+        <li><strong>Reward model (RM)</strong> &mdash; collect human rankings of several model outputs per prompt, then train a model to predict that preference ordering (a scalar reward).</li>
+        <li><strong>RL with PPO</strong> &mdash; optimise the SFT policy against the reward model using Proximal Policy Optimization, with a per-token <strong>KL penalty</strong> to the SFT reference to stop the policy from drifting into reward-hacked gibberish.</li>
+    </ol>
+    <div class="diagram-flow">
+        <div class="diagram-box dim">Pretrained<br><small>GPT-3 base</small></div>
+        <div class="diagram-arrow">&rarr;</div>
+        <div class="diagram-box accent">1. SFT<br><small>human demos</small></div>
+        <div class="diagram-arrow">&rarr;</div>
+        <div class="diagram-box accent">2. Reward Model<br><small>ranked prefs</small></div>
+        <div class="diagram-arrow">&rarr;</div>
+        <div class="diagram-box accent">3. PPO<br><small>+ KL penalty</small></div>
+        <div class="diagram-arrow">&rarr;</div>
+        <div class="diagram-box">Aligned policy<br><small>InstructGPT</small></div>
+    </div>
+    <p>The headline empirical result: outputs from the <strong>1.3B</strong> InstructGPT model were preferred by human labellers over those from the <strong>175B</strong> base GPT-3 &mdash; a ~100&times; smaller model, made better by alignment rather than scale.</p>
+
+    <h3>Why it matters to a practising engineer</h3>
+    <p>This is the mental model behind every aligned chat model you will deploy or fine-tune. The KL term is the single most important knob: too little and the policy reward-hacks; too much and it ignores the reward signal. Understanding the SFT &rarr; RM &rarr; PPO decomposition tells you exactly where a behaviour came from when you debug an assistant.</p>
+    <div class="callout">
+        <div class="callout-label">The alignment tax</div>
+        <p>RLHF can <em>degrade</em> raw benchmark performance on some NLP tasks &mdash; the "alignment tax". InstructGPT mitigated it by mixing pretraining gradients back into the PPO update (PPO-ptx). When you align a model, always re-measure capability benchmarks, not just preference win-rate.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-02">
+    <div class="slide-number">02</div>
+    <h2>Constitutional AI: Harmlessness from AI Feedback</h2>
+    <p>Bai et al. (Anthropic), 2022 <span class="badge ok">2022</span> <span class="badge">arXiv:2212.08073</span></p>
+
+    <h3>The problem</h3>
+    <p>The RLHF harmlessness signal in InstructGPT depends on humans reading and labelling large volumes of <strong>toxic, harmful, or disturbing content</strong>. That is slow, expensive, psychologically taxing for labellers, and hard to scale or audit. Human preference data is also opaque: the "values" of the model live implicitly in thousands of individual labels rather than in a stated set of principles.</p>
+
+    <h3>The contribution</h3>
+    <p><strong>RLAIF</strong> &mdash; Reinforcement Learning from AI Feedback &mdash; replaces the human harm labels with an AI judge guided by a short, written <strong>"constitution"</strong> (a set of natural-language principles). Two stages:</p>
+    <ul>
+        <li><strong>Supervised (SL) stage</strong> &mdash; the model generates a response, then is prompted to <em>critique</em> its own answer against a constitutional principle and <em>revise</em> it. The revised answers form an SFT dataset (self-improvement, no human harm labels).</li>
+        <li><strong>RL stage</strong> &mdash; for harmlessness preferences, an AI model picks the better of two responses according to the constitution, producing a preference dataset that trains a reward model. RLHF then proceeds as usual (often called RLAIF).</li>
+    </ul>
+    <div class="diagram-flow">
+        <div class="diagram-box accent">Constitution<br><small>written principles</small></div>
+        <div class="diagram-arrow">&rarr;</div>
+        <div class="diagram-box">Response</div>
+        <div class="diagram-arrow">&rarr;</div>
+        <div class="diagram-box accent">Self-critique<br><small>vs principle</small></div>
+        <div class="diagram-arrow">&rarr;</div>
+        <div class="diagram-box accent">Revise</div>
+        <div class="diagram-arrow">&rarr;</div>
+        <div class="diagram-box">SFT &rarr; RLAIF</div>
+    </div>
+
+    <h3>Why it matters to a practising engineer</h3>
+    <p>CAI is the template for <strong>scalable oversight</strong>: using a model to supervise a model. The same critique-and-revise loop underlies modern synthetic-data pipelines and LLM-as-judge evaluation. Crucially, the model's values become <em>editable text</em> &mdash; you change behaviour by editing the constitution rather than re-collecting human labels.</p>
+    <div class="callout">
+        <div class="callout-label">Helpful vs harmless tension</div>
+        <p>A model trained only to be harmless learns to refuse everything ("I can't help with that"). CAI explicitly balances <strong>helpfulness</strong> (still from human feedback) against <strong>harmlessness</strong> (from AI feedback). When you write your own system prompts and refusal policies, you are authoring a miniature constitution &mdash; and inheriting the same trade-off.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-03">
+    <div class="slide-number">03</div>
+    <h2>LoRA: Low-Rank Adaptation of Large Language Models</h2>
+    <p>Hu et al. (Microsoft), 2021 <span class="badge ok">ICLR 2022</span> <span class="badge">arXiv:2106.09685</span></p>
+
+    <h3>The problem</h3>
+    <p>Full fine-tuning updates <em>every</em> weight, so each task produces a complete copy of the model &mdash; gigabytes per task, and an optimiser state several times the model size in GPU memory. Serving dozens of fine-tuned variants, or fine-tuning at all on consumer hardware, becomes impractical.</p>
+
+    <h3>The contribution</h3>
+    <p>Freeze the pretrained weight matrix <code>W&#8320;</code> and learn the update as a <strong>low-rank decomposition</strong>. The hypothesis: the weight <em>change</em> needed for a downstream task has low "intrinsic rank", so it can be written as the product of two skinny matrices <code>B</code> (d&times;r) and <code>A</code> (r&times;d) with rank <code>r &#8810; d</code>.</p>
+    <div class="code-block">
+        <div class="code-header">LoRA forward pass &mdash; only A and B are trained</div>
+<pre><code><span class="cm"># W0 frozen [d x d];  A [r x d], B [d x r];  r &lt;&lt; d</span>
+<span class="cm"># A ~ N(0, sigma^2),  B = 0  =&gt; deltaW starts at zero</span>
+h = x @ W0.T + (alpha / r) * (x @ A.T @ B.T)
+<span class="cm">#       frozen            trainable low-rank update</span>
+
+<span class="cm"># Equivalent merged form for zero-latency inference:</span>
+W = W0 + (alpha / r) * (B @ A)</code></pre>
+    </div>
+    <p>Only <code>A</code> and <code>B</code> receive gradients &mdash; reducing trainable parameters by up to <strong>~10,000&times;</strong> and optimiser memory dramatically. Because <code>B&middot;A</code> can be <strong>merged into <code>W&#8320;</code></strong> after training, there is <strong>no added inference latency</strong>, unlike adapter layers.</p>
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>What you store per task</h4>
+            <p>Just the adapter (A, B) &mdash; often a few MB instead of multiple GB. Swap adapters at serve time to switch tasks while sharing one frozen base in memory.</p>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>Key knobs</h4>
+            <p><code>r</code> (rank, e.g. 8&ndash;64), <code>alpha</code> (scaling), and <em>which</em> matrices to adapt. Adapting the attention projections (q, k, v, o) is the common sweet spot.</p>
+        </div>
+    </div>
+
+    <h3>Why it matters to a practising engineer</h3>
+    <p>LoRA is the default fine-tuning method in 2024&ndash;2025. It is what makes per-customer or per-task model customisation economical, and what powers multi-adapter serving stacks (e.g. S-LoRA, vLLM adapters). If you fine-tune anything, you almost certainly fine-tune with LoRA.</p>
+    <div class="callout">
+        <div class="callout-label">The merge trick</div>
+        <p>Because <code>W = W&#8320; + (alpha/r)&middot;B&middot;A</code> is just another weight matrix, you can ship a merged model with <em>identical</em> inference cost to the base &mdash; or keep adapters separate and hot-swap them. This duality is LoRA's superpower over earlier adapter methods that added permanent runtime layers.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-04">
+    <div class="slide-number">04</div>
+    <h2>QLoRA: Efficient Finetuning of Quantized LLMs</h2>
+    <p>Dettmers et al., 2023 <span class="badge ok">NeurIPS 2023</span> <span class="badge">arXiv:2305.14314</span></p>
+
+    <h3>The problem</h3>
+    <p>LoRA shrinks the <em>trainable</em> footprint, but you still must hold the <strong>frozen base weights</strong> in GPU memory to compute gradients through them. A 65B model in 16-bit needs ~130 GB just for weights &mdash; far beyond a single consumer or workstation GPU.</p>
+
+    <h3>The contribution</h3>
+    <p>Keep the base frozen but store it in <strong>4-bit</strong>, and back-propagate through it into 16-bit LoRA adapters. Three innovations make this lossless enough to match 16-bit fine-tuning:</p>
+    <ul>
+        <li><strong>4-bit NormalFloat (NF4)</strong> &mdash; an information-theoretically optimal data type for weights that are (approximately) normally distributed, beating plain int4/fp4.</li>
+        <li><strong>Double quantisation</strong> &mdash; quantise the quantisation constants themselves, saving a further ~0.4 bits/param on average.</li>
+        <li><strong>Paged optimisers</strong> &mdash; use NVIDIA unified memory to page optimiser state to CPU on memory spikes, avoiding OOM during long sequences.</li>
+    </ul>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Approach</th><th>Base precision</th><th>~Memory for 65B weights</th><th>Single 48GB GPU?</th></tr></thead>
+            <tbody>
+                <tr><td>Full fine-tuning (16-bit)</td><td>bf16</td><td>~130 GB + optimiser</td><td>No <span class="badge bad">&times;</span></td></tr>
+                <tr><td>LoRA (16-bit base)</td><td>bf16</td><td>~130 GB (base still resident)</td><td>No <span class="badge bad">&times;</span></td></tr>
+                <tr><td><strong>QLoRA (4-bit base)</strong></td><td>NF4 + bf16 adapters</td><td>~&lt; 48 GB total</td><td>Yes <span class="badge ok">&#10003;</span></td></tr>
+            </tbody>
+        </table>
+    </div>
+    <p>The result: fine-tune a <strong>65B-parameter model on a single 48GB GPU</strong> with negligible quality loss versus 16-bit fine-tuning. The paper's Guanaco models, trained this way, reached near-ChatGPT quality on the Vicuna benchmark.</p>
+
+    <h3>Why it matters to a practising engineer</h3>
+    <p>QLoRA democratised fine-tuning of large open-weights models. It is why a single A6000/A100-40G &mdash; or even a 24GB card for 7B&ndash;13B models &mdash; can produce a high-quality custom model. NF4 + double quant is the default config in tools like <code>bitsandbytes</code>, <code>peft</code>, and Unsloth.</p>
+    <div class="callout">
+        <div class="callout-label">Quant for training, not always for serving</div>
+        <p>QLoRA quantises the base <em>during training</em>. For inference you can keep the 4-bit base + adapters, or de-quantise and merge into a 16-bit model. Match the serving precision to your latency and quality targets &mdash; NF4 is optimised for the training pass, not necessarily for production throughput.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-05">
+    <div class="slide-number">05</div>
+    <h2>Direct Preference Optimization (DPO)</h2>
+    <p>Rafailov et al. (Stanford), 2023 <span class="badge ok">NeurIPS 2023</span> <span class="badge">arXiv:2305.18290</span></p>
+
+    <h3>The problem</h3>
+    <p>RLHF works, but the PPO stage is <strong>fragile and operationally heavy</strong>: you must train and host a separate reward model, then run an on-policy RL loop with reward sampling, value networks, and careful KL control. It is sensitive to hyperparameters and hard to reproduce.</p>
+
+    <h3>The contribution</h3>
+    <p>DPO shows that the RLHF objective (maximise reward under a KL constraint to a reference policy) has a <strong>closed-form optimal policy</strong>. Substituting that solution back into the Bradley&ndash;Terry preference model lets you express the reward <em>implicitly</em> in terms of the policy itself &mdash; collapsing the entire pipeline into a single <strong>classification-style loss</strong> on preference pairs. No reward model, no sampling, no RL loop.</p>
+    <div class="code-block">
+        <div class="code-header">DPO loss &mdash; one supervised pass over (prompt, chosen, rejected)</div>
+<pre><code><span class="cm"># pi  = policy being trained;  ref = frozen reference (the SFT model)</span>
+<span class="cm"># y_w = preferred (chosen) response,  y_l = rejected response</span>
+log_ratio_w = logp(pi, y_w) - logp(ref, y_w)
+log_ratio_l = logp(pi, y_l) - logp(ref, y_l)
+
+<span class="cm"># beta controls deviation from the reference (the implicit KL)</span>
+loss = -log_sigmoid(beta * (log_ratio_w - log_ratio_l))</code></pre>
+    </div>
+    <p>Intuitively: push up the policy's log-probability of the chosen response and push down the rejected one, each measured <em>relative to the frozen reference</em>. The <code>beta</code> term plays the role of the KL coefficient from RLHF.</p>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Aspect</th><th>RLHF (PPO)</th><th>DPO</th></tr></thead>
+            <tbody>
+                <tr><td>Separate reward model</td><td>Required</td><td>None &mdash; implicit</td></tr>
+                <tr><td>Training loop</td><td>On-policy RL + sampling</td><td>Supervised, offline pairs</td></tr>
+                <tr><td>Models in memory</td><td>Policy + value + reward + ref</td><td>Policy + frozen reference</td></tr>
+                <tr><td>Stability</td><td>Sensitive, needs tuning</td><td>Stable, easy to reproduce</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Why it matters to a practising engineer</h3>
+    <p>DPO is now the default preference-tuning method for most open-weights alignment work &mdash; it runs in any standard fine-tuning loop (and composes with LoRA/QLoRA). If you have a dataset of <code>(prompt, chosen, rejected)</code> pairs, you can align a model in an afternoon with no RL infrastructure.</p>
+    <div class="callout">
+        <div class="callout-label">Not a total replacement</div>
+        <p>DPO needs good preference pairs and can over-fit to the reference distribution; online/on-policy variants and successors (IPO, KTO, ORPO) address its limitations. For frontier-scale harmlessness work, PPO-style RLHF and RLAIF still appear &mdash; but DPO is the pragmatic first choice for most teams.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-06">
+    <div class="slide-number">06</div>
+    <h2>What to Take Away</h2>
+    <ul>
+        <li><strong>Alignment is a pipeline, not a single step.</strong> Base &rarr; SFT &rarr; preference signal &rarr; preference optimisation. InstructGPT defined the canonical SFT &rarr; RM &rarr; PPO form.</li>
+        <li><strong>The feedback source is a design choice.</strong> Human feedback (RLHF) is the gold standard; AI feedback against a written constitution (Constitutional AI / RLAIF) scales oversight and removes humans from labelling toxic content.</li>
+        <li><strong>The KL-to-reference term is the heart of preference tuning</strong> &mdash; explicit in PPO, implicit as <code>beta</code> in DPO. It keeps the model from drifting into reward-hacked nonsense.</li>
+        <li><strong>LoRA made fine-tuning cheap</strong> by learning a low-rank update <code>&#916;W = B&middot;A</code> with no inference penalty after merging.</li>
+        <li><strong>QLoRA made it cheap at scale</strong> &mdash; 4-bit NF4 base + 16-bit adapters fine-tunes a 65B model on one 48GB GPU.</li>
+        <li><strong>DPO made preference tuning simple</strong> by turning RLHF into a single classification loss &mdash; no reward model, no RL loop.</li>
+    </ul>
+    <div class="callout">
+        <div class="callout-label">Next in the series</div>
+        <p>Presentation 03 &mdash; <strong>Reasoning &amp; Test-Time Compute</strong>: chain-of-thought, self-consistency, and the shift from training-time scale to inference-time deliberation that defines the latest frontier models.</p>
+    </div>
+</section>
+
+<footer class="footer">
+    <p>Part of the <a href="https://github.com/BrendanJamesLynskey/LLM_Hub_Key_Publications">Key LLM Publications Series</a></p>
+    <p style="margin-top:0.5rem;font-size:0.8rem;"><a href="https://github.com/BrendanJamesLynskey/LLM_Hub_Key_Publications">Back to Series Index</a></p>
+</footer>
+<script>
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.slide').forEach(slide => {
+        slide.style.opacity = '0';
+        slide.style.transform = 'translateY(30px)';
+        slide.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(slide);
+    });
+</script>
+</body>
+</html>
